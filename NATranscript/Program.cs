@@ -22,6 +22,9 @@ namespace online.natranscribe
     using System.Collections.Generic;
     using System.Net;
 
+    using NAudio.Wave;
+
+
     /// <summary>
     /// This sample program shows how to use <see cref="SpeechClient"/> APIs to perform speech recognition.
     /// </summary>
@@ -125,6 +128,17 @@ namespace online.natranscribe
             return fileName;
         }
 
+        private static void ConvertMp3ToWav(string _inPath_, string _outPath_)
+        {
+            using (Mp3FileReader mp3 = new Mp3FileReader(_inPath_))
+            {
+                using (WaveStream pcm = WaveFormatConversionStream.CreatePcmStream(mp3))
+                {
+                    WaveFileWriter.CreateWaveFile(_outPath_, pcm);
+                }
+            }
+        }
+
 
         /// <summary>
         /// The entry point to this sample program. It validates the input arguments
@@ -133,6 +147,12 @@ namespace online.natranscribe
         /// <param name="args">The input arguments.</param>
         public static void Main(string[] args)
         {
+
+            if (args[0] == null || args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+            {
+                DisplayHelp("Please supply key");
+                return;
+            }
 
             Program ap = new Program();
             Episode selected = ap.GetEpisodeFromRssFeed();
@@ -143,6 +163,7 @@ namespace online.natranscribe
                 System.IO.Directory.CreateDirectory(newDirectory);
                 string fileName = ap.GetFileName(selected.url);
                 string filePathName = newDirectory + @"\" + fileName;
+                string wavfilePathName = filePathName.Replace(".mp3",".wav");
 
                 // download file
                 using (var client = new WebClient())
@@ -153,35 +174,13 @@ namespace online.natranscribe
 
                 // convert to wav because microsoft can't handle anything else....
                 // i guess it is the same as flac for google
+                ConvertMp3ToWav(filePathName, wavfilePathName);
 
-
+                ap.Run(wavfilePathName, "en-US", LongDictationUrl, args[0], selected.episodeNumber).Wait();
 
 
             }
-
-            // Validate the input arguments count.
-            if (args.Length < 4)
-            {
-                DisplayHelp("Invalid number of arguments.");
-                return;
-            }
-
-            // Ensure the audio file exists.
-            if (!File.Exists(args[0]))
-            {
-                DisplayHelp("Audio file not found.");
-                return;
-            }
-
-            if (!"long".Equals(args[2], StringComparison.OrdinalIgnoreCase) && !"short".Equals(args[2], StringComparison.OrdinalIgnoreCase))
-            {
-                DisplayHelp("Invalid RecognitionMode.");
-                return;
-            }
-
-            // Send a speech recognition request for the audio.
-            var p = new Program();
-            p.Run(args[0], args[1], char.ToLower(args[2][0]) == 'l' ? LongDictationUrl : ShortPhraseUrl, args[3]).Wait();
+            
         }
 
         private static void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
@@ -189,25 +188,7 @@ namespace online.natranscribe
             Console.Write("\r Download Progess: {0}%", e.ProgressPercentage);
         }
 
-        /// <summary>
-        /// Invoked when the speech client receives a partial recognition hypothesis from the server.
-        /// </summary>
-        /// <param name="args">The partial response recognition result.</param>
-        /// <returns>
-        /// A task
-        /// </returns>
-        public Task OnPartialResult(RecognitionPartialResult args)
-        {
-            Console.WriteLine("--- Partial result received by OnPartialResult ---");
-
-            // Print the partial response recognition hypothesis.
-            Console.WriteLine(args.DisplayText);
-
-            Console.WriteLine();
-
-            return CompletedTask;
-        }
-
+        
         /// <summary>
         /// Invoked when the speech client receives a phrase recognition result(s) from the server.
         /// </summary>
@@ -243,24 +224,7 @@ namespace online.natranscribe
         }
 
 
-        string GetEpisodeFromFile(string path)
-        {
-            string retValue = "";
-
-            string pattern = "-[0-9]{4}-"; // look for 4 numbers surrounded by 2 dashes
-            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
-
-            MatchCollection matches = regex.Matches(path);
-            if (matches.Count > 0)
-            {
-                retValue = matches[0].Value; // only get the first one
-                Regex digitsOnly = new Regex(@"[^\d]"); // only keep the numbers
-                retValue = digitsOnly.Replace(retValue, "");
-            }
-            return retValue;
-        }
-
-
+        
         /// <summary>
         /// Sends a speech recognition request to the speech service
         /// </summary>
@@ -273,22 +237,21 @@ namespace online.natranscribe
         /// </returns>
         /// 
 
-        public async Task Run(string audioFile, string locale, Uri serviceUrl, string subscriptionKey)
+        public async Task Run(string audioFile, string locale, Uri serviceUrl, string subscriptionKey, string episode)
         {
             // create the preferences object
             var preferences = new Preferences(locale, serviceUrl, new CognitiveServicesAuthorizationProvider(subscriptionKey));
 
 
             string simpleFilename = Path.GetFileNameWithoutExtension(audioFile);
-            string episode = GetEpisodeFromFile(simpleFilename);
-
+            
             if (int.TryParse(episode, out int outepisode))
                 episodenumber = outepisode;
             else
                 return;
 
-            htmlOutputFilePath = Path.GetDirectoryName(audioFile) + "\\" + episodenumber.ToString() + ".html";
-            opmlOutputFilePath = Path.GetDirectoryName(audioFile) + "\\" + episodenumber.ToString() + ".opml";
+            htmlOutputFilePath = Path.GetDirectoryName(audioFile) + @"\" + episodenumber.ToString() + ".html";
+            opmlOutputFilePath = Path.GetDirectoryName(audioFile) + @"\" + episodenumber.ToString() + ".opml";
 
             // Create a a speech client
             using (var speechClient = new SpeechClient(preferences))
