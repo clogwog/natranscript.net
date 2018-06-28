@@ -16,8 +16,11 @@ namespace online.natranscribe
     using System.Threading.Tasks;
     using CognitiveServicesAuthorization;
     using Microsoft.Bing.Speech;
-    using System.Xml.Linq;
     using System.Xml;
+
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Net;
 
     /// <summary>
     /// This sample program shows how to use <see cref="SpeechClient"/> APIs to perform speech recognition.
@@ -55,13 +58,13 @@ namespace online.natranscribe
         {
             public string name;
             public string url;
-            public int episodeNumber = -1;
+            public string  episodeNumber = "";
 
             public bool IsEmpty
             {
                 get
                 {
-                    return episodeNumber == -1;
+                    return string.IsNullOrWhiteSpace(episodeNumber);
                 }
             }
         }
@@ -70,21 +73,57 @@ namespace online.natranscribe
         public Episode GetEpisodeFromRssFeed()
         {
             Episode retValue = new Episode();
+            List<Episode> episodeList = new List<Episode>();
             // download rss feed
             XmlDocument feedXML = new XmlDocument();
             feedXML.Load(rssfeeduri);
 
+            
             // show result
+            XmlNodeList taglist = feedXML.GetElementsByTagName("item");
+            int t = 1;
+            foreach(XmlNode node in taglist)
+            {
+                Episode a = new Episode();
+                a.name = node.SelectSingleNode("title")?.InnerText;
+                a.url = node.SelectSingleNode("enclosure")?.Attributes?.GetNamedItem("url")?.InnerText;
+                string[] subtitle = a.name.Split(':');
+                if( subtitle.Length > 0)
+                    a.episodeNumber = subtitle[0];
 
+                Console.WriteLine(string.Format("{0}) {1}", t, a.name ));
 
+                episodeList.Add(a);
+                t++;
+            }
             // ask to choose
+            Console.WriteLine(string.Format("\n\nPlease select an episode\n"));
+            string result = Console.ReadLine();
+            if( int.TryParse(result, out int selection))
+            {
+                if( selection <= episodeList.Count)
+                {
+                    retValue = episodeList[selection - 1];
+                }
+            }
 
             // fill in retValue
-
             return retValue;
 
         }
-            
+
+        private string GetFileName(string hrefLink)
+        {
+            string[] parts = hrefLink.Split('/');
+            string fileName = "";
+
+            if (parts.Length > 0)
+                fileName = parts[parts.Length - 1];
+            else
+                fileName = hrefLink;
+
+            return fileName;
+        }
 
 
         /// <summary>
@@ -94,6 +133,32 @@ namespace online.natranscribe
         /// <param name="args">The input arguments.</param>
         public static void Main(string[] args)
         {
+
+            Program ap = new Program();
+            Episode selected = ap.GetEpisodeFromRssFeed();
+            if( ! selected.IsEmpty)
+            {
+                // create a directory
+                string newDirectory = @"episodes\" + selected.episodeNumber;
+                System.IO.Directory.CreateDirectory(newDirectory);
+                string fileName = ap.GetFileName(selected.url);
+                string filePathName = newDirectory + @"\" + fileName;
+
+                // download file
+                using (var client = new WebClient())
+                {
+                    client.DownloadProgressChanged += Client_DownloadProgressChanged;
+                    client.DownloadFile(selected.url, filePathName);
+                }
+
+                // convert to wav because microsoft can't handle anything else....
+                // i guess it is the same as flac for google
+
+
+
+
+            }
+
             // Validate the input arguments count.
             if (args.Length < 4)
             {
@@ -117,6 +182,11 @@ namespace online.natranscribe
             // Send a speech recognition request for the audio.
             var p = new Program();
             p.Run(args[0], args[1], char.ToLower(args[2][0]) == 'l' ? LongDictationUrl : ShortPhraseUrl, args[3]).Wait();
+        }
+
+        private static void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
+        {
+            Console.Write("\r Download Progess: {0}%", e.ProgressPercentage);
         }
 
         /// <summary>
