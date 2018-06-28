@@ -16,6 +16,8 @@ namespace online.natranscribe
     using System.Threading.Tasks;
     using CognitiveServicesAuthorization;
     using Microsoft.Bing.Speech;
+    using System.Xml.Linq;
+    using System.Xml;
 
     /// <summary>
     /// This sample program shows how to use <see cref="SpeechClient"/> APIs to perform speech recognition.
@@ -42,10 +44,48 @@ namespace online.natranscribe
         /// </summary>
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
+        private readonly string rssfeeduri = @"http://feed.nashownotes.com/rss.xml";
+
 
         private int episodenumber;
         private string htmlOutputFilePath;
         private string opmlOutputFilePath;
+
+        public class Episode
+        {
+            public string name;
+            public string url;
+            public int episodeNumber = -1;
+
+            public bool IsEmpty
+            {
+                get
+                {
+                    return episodeNumber == -1;
+                }
+            }
+        }
+
+
+        public Episode GetEpisodeFromRssFeed()
+        {
+            Episode retValue = new Episode();
+            // download rss feed
+            XmlDocument feedXML = new XmlDocument();
+            feedXML.Load(rssfeeduri);
+
+            // show result
+
+
+            // ask to choose
+
+            // fill in retValue
+
+            return retValue;
+
+        }
+            
+
 
         /// <summary>
         /// The entry point to this sample program. It validates the input arguments
@@ -191,7 +231,7 @@ namespace online.natranscribe
                 {
                     var deviceMetadata = new DeviceMetadata(DeviceType.Near, DeviceFamily.Desktop, NetworkType.Ethernet, OsName.Windows, "1607", "Dell", "T3600");
                     var applicationMetadata = new ApplicationMetadata("NA Transcribe", "1.0.0");
-                    var requestMetadata = new RequestMetadata(Guid.NewGuid(), deviceMetadata, applicationMetadata, "SampleAppService");
+                    var requestMetadata = new RequestMetadata(Guid.NewGuid(), deviceMetadata, applicationMetadata, "NATranscriptService");
 
                     await speechClient.RecognizeAsync(new SpeechInput(audio, requestMetadata), this.cts.Token).ConfigureAwait(false);
                 }
@@ -206,7 +246,7 @@ namespace online.natranscribe
         {
             if (string.IsNullOrEmpty(message))
             {
-                message = "SpeechClientSample Help";
+                message = "NATranscript.net Help";
             }
 
             Console.WriteLine(message);
