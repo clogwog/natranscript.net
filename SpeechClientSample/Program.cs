@@ -7,7 +7,7 @@
 //  </copyright>
 //  ---------------------------------------------------------------------------------------------------------------------
 
-namespace SpeechClientSample
+namespace online.natranscribe
 {
     using System;
     using System.IO;
@@ -108,19 +108,11 @@ namespace SpeechClientSample
         public Task OnRecognitionResult(RecognitionResult args)
         {
             var response = args;
-            //Console.WriteLine();
 
-           // Console.WriteLine("--- Phrase result received by OnRecognitionResult ---");
-
-            // Print the recognition status.
-            //Console.WriteLine("***** Phrase Recognition Status = [{0}] ***", response.RecognitionStatus);
             if (response.Phrases != null)
             {
                 foreach (var result in response.Phrases)
                 {
-                    // Print the recognition phrase display text.
-                    //Console.WriteLine("{2} : {0}                        -(Confidence:{1} )", result.DisplayText, result.Confidence, (double)(result.MediaTime / ( 100000000.0)));
-                    
                     int seconds = (int)(result.MediaTime / 10000000);
 
                     string inline = result.DisplayText;
@@ -130,16 +122,13 @@ namespace SpeechClientSample
                     {
                         string lineOutput = string.Format("<a target='naplayer' title='click to play' href='http://naplay.it/{0}/{1}'>{2}</a> {3}", episodenumber.ToString(), seconds, words[0], words[1]);
                         Console.WriteLine(lineOutput);
-
-                        File.AppendAllLines(htmlOutputFilePath, new[] { lineOutput, " ", " " });
-
+                        File.AppendAllLines(htmlOutputFilePath, new[] { lineOutput, " ", " " }); // add a few empty lines to split them up
                     }
 
                     break;
                 }
             }
 
-            Console.WriteLine();
             return CompletedTask;
         }
 
@@ -148,18 +137,16 @@ namespace SpeechClientSample
         {
             string retValue = "";
 
-            string pattern = "-[0-9]{4}-";
+            string pattern = "-[0-9]{4}-"; // look for 4 numbers surrounded by 2 dashes
             Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
 
             MatchCollection matches = regex.Matches(path);
             if (matches.Count > 0)
             {
-                retValue = matches[0].Value;
-                Regex digitsOnly = new Regex(@"[^\d]");
+                retValue = matches[0].Value; // only get the first one
+                Regex digitsOnly = new Regex(@"[^\d]"); // only keep the numbers
                 retValue = digitsOnly.Replace(retValue, "");
-                
             }
-
             return retValue;
         }
 
@@ -203,7 +190,7 @@ namespace SpeechClientSample
                 using (var audio = new FileStream(audioFile, FileMode.Open, FileAccess.Read))
                 {
                     var deviceMetadata = new DeviceMetadata(DeviceType.Near, DeviceFamily.Desktop, NetworkType.Ethernet, OsName.Windows, "1607", "Dell", "T3600");
-                    var applicationMetadata = new ApplicationMetadata("SampleApp", "1.0.0");
+                    var applicationMetadata = new ApplicationMetadata("NA Transcribe", "1.0.0");
                     var requestMetadata = new RequestMetadata(Guid.NewGuid(), deviceMetadata, applicationMetadata, "SampleAppService");
 
                     await speechClient.RecognizeAsync(new SpeechInput(audio, requestMetadata), this.cts.Token).ConfigureAwait(false);

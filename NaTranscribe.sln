@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeechClientSample", "SpeechClientSample\SpeechClientSample.csproj", "{5DAB1D60-3378-4BD5-8744-A55D55D5F653}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NaTranscribe.net", "SpeechClientSample\NaTranscribe.net.csproj", "{5DAB1D60-3378-4BD5-8744-A55D55D5F653}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
